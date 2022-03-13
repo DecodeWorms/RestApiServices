@@ -3,13 +3,12 @@ package serverjson
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"net/http"
 	"restapiservices/handler"
 	"restapiservices/objects"
 	"restapiservices/util"
 
-	"github.com/gorilla/mux"
+	"github.com/gin-gonic/gin"
 )
 
 type AuthorJson struct {
@@ -24,68 +23,90 @@ func NewAuthJosn(author *handler.AuthorHandler) *AuthorJson {
 
 }
 
-func (au AuthorJson) SignUp(w http.ResponseWriter, r *http.Request) {
-	util.SetHeader(w)
-	var ctx context.Context
-	var auths objects.Author
-	if err := json.NewDecoder(r.Body).Decode(&auths); err != nil {
-		json.NewEncoder(w).Encode("Unable to UnMarshal JSON")
+func (au AuthorJson) SignUp() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var auths objects.Author
+		if err := c.ShouldBindJSON(&auths); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		_, err := au.author.SignUp(c, auths)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"status": "error in creating user"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"status": "user created successfully", "results": auths})
+
 	}
-	res, err := au.author.SignUp(ctx, auths)
-	if err != nil {
-		json.NewEncoder(w).Encode("Unable to create author")
-		log.Fatal(err)
+}
+
+func (au AuthorJson) Author() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		params := c.Param("email")
+		res, err := au.author.Author(c, params)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "error in fetching an author"})
+		}
+		c.JSON(http.StatusOK, gin.H{"status": res})
+
+	}
+
+}
+
+func (au AuthorJson) Authors() gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		res, err := au.author.Authors(c)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "error in fetching authors"})
+		}
+		c.JSON(http.StatusOK, gin.H{"results": res})
+
+	}
+
+}
+
+func (au AuthorJson) Update() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var author *objects.Author
+		if err := c.ShouldBindJSON(&author); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "error in Unmarshaling JSON"})
+			return
+		}
+		if err := au.author.Update(c, author); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "error in updating an author"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"result": "successfully updated"})
+
+	}
+
+}
+
+func (au AuthorJson) Delete() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		email := c.Param("email")
+		if err := au.author.Delete(c, email); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "error in Unmarshaling JSON"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"result": "author successfully deleted"})
+
+	}
+
+}
+
+func (au AuthorJson) ValidateEmail(w http.ResponseWriter, r *http.Request) {
+	util.SetHeader(w)
+	var ob *objects.Author
+	if err := json.NewDecoder(r.Body).Decode(&ob); err != nil {
+		json.NewEncoder(w).Encode("Unable to Unmarshal JSON")
 		return
 	}
-	json.NewEncoder(w).Encode(res)
-
-}
-
-func (au AuthorJson) Author(w http.ResponseWriter, r *http.Request) {
-	util.SetHeader(w)
-	params := mux.Vars(r)
-	email := params["email"]
 	var ctx context.Context
-	res, err := au.author.Author(ctx, email)
+	mail, err := au.author.ValidateEmail(ctx, ob.Email)
 	if err != nil {
-		json.NewEncoder(w).Encode(err)
+		json.NewEncoder(w).Encode("error in validating emaill")
 	}
-	json.NewEncoder(w).Encode(res)
-}
-
-func (au AuthorJson) Authors(w http.ResponseWriter, r *http.Request) {
-	util.SetHeader(w)
-	var ctx context.Context
-	res, err := au.author.Authors(ctx)
-	if err != nil {
-		json.NewEncoder(w).Encode(err)
-	}
-	json.NewEncoder(w).Encode(res)
-}
-
-func (au AuthorJson) Update(w http.ResponseWriter, r *http.Request) {
-	util.SetHeader(w)
-	var ctx context.Context
-	var author *objects.Author
-	if err := json.NewDecoder(r.Body).Decode(&author); err != nil {
-		json.NewEncoder(w).Encode(err)
-		return
-	}
-	if err := au.author.Update(ctx, author); err != nil {
-		json.NewEncoder(w).Encode(err)
-		return
-	}
-	json.NewEncoder(w).Encode("Username name updated successfully")
-}
-
-func (au AuthorJson) Delete(w http.ResponseWriter, r *http.Request) {
-	util.SetHeader(w)
-	params := mux.Vars(r)
-	email := params["email"]
-
-	var ctx context.Context
-	if err := au.author.Delete(ctx, email); err != nil {
-		json.NewEncoder(w).Encode("error in deleteing author")
-	}
-	json.NewEncoder(w).Encode("author deleted successfully..")
+	json.NewEncoder(w).Encode(mail)
 }

@@ -10,6 +10,7 @@ type AuthorService interface {
 	Author(ctx context.Context, email string) (*Author, error)
 	Update(ctx context.Context, cr *Author) error
 	Delete(ctx context.Context, email string) error
+	ValidateEmail(ctx context.Context, email string) (string, error)
 }
 
 type Author struct {

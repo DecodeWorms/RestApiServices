@@ -65,17 +65,26 @@ func (au AuthorServices) Author(ctx context.Context, email string) (*objects.Aut
 func (au AuthorServices) Update(ctx context.Context, author *objects.Author) error {
 	_, err := au.conn.Client.Exec("UPDATE authors SET name = $1 WHERE email = $2", author.Name, author.Email)
 	if err != nil {
-		return nil
+		return err
 	}
-	return err
+	return nil
 
 }
 
 func (au AuthorServices) Delete(ctx context.Context, email string) error {
 	_, err := au.conn.Client.Exec("DELETE FROM authors WHERE email = $1", email)
 	if err != nil {
-		return nil
+		return err
 	}
-	return err
+	return nil
 
+}
+
+func (au AuthorServices) ValidateEmail(ctx context.Context, email string) (string, error) {
+	var e objects.Author
+	r := au.conn.Client.QueryRow("SELECT email FROM authors WHERE email = $1", email)
+	if err := r.Scan(&e.Email); err != nil {
+		return "", err
+	}
+	return e.Email, nil
 }

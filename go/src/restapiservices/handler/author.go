@@ -93,6 +93,20 @@ func (au AuthorHandler) Delete(ctx context.Context, email string) error {
 
 }
 
+func (au AuthorHandler) ValidateEmail(ctx context.Context, email string) (string, error) {
+	em, err := ValidateEmail(email)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ma, err := au.authorService.ValidateEmail(ctx, em)
+	if err != nil {
+		return "", err
+	}
+	return ma, nil
+
+}
+
 func ValidateRegDatas(data objects.Author) (*objects.Author, error) {
 
 	if data.Id == 0 {
@@ -145,3 +159,9 @@ func ValidateUpdate(u *objects.Author) (*objects.Author, error) {
 	}
 	return u, nil
 }
+
+// func CheckIfAExist(e string)(string,error){
+// 	if e == ""{
+// 		return "", errors.New("")
+// 	}
+// }
