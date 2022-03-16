@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"restapiservices/conv"
 	"restapiservices/handler"
 	"restapiservices/objects"
 	"restapiservices/util"
@@ -23,11 +24,17 @@ func NewAuthJosn(author *handler.AuthorHandler) *AuthorJson {
 
 }
 
+const (
+	Name        string = "Deola"
+	PhoneNumber string = "Kunle"
+)
+
 func (au AuthorJson) SignUp() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var auths objects.Author
 		if err := c.ShouldBindJSON(&auths); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			//c.AbortWithError(401, err)
 			return
 		}
 		_, err := au.author.SignUp(c, auths)
@@ -46,8 +53,10 @@ func (au AuthorJson) Author() gin.HandlerFunc {
 		res, err := au.author.Author(c, params)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error in fetching an author"})
+			return
 		}
-		c.JSON(http.StatusOK, gin.H{"status": res})
+		c.JSON(http.StatusOK, gin.H{"author": res})
+		c.JSON(http.StatusOK, gin.H{"name": Name, "phoneNumber": PhoneNumber})
 
 	}
 
@@ -61,6 +70,11 @@ func (au AuthorJson) Authors() gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error in fetching authors"})
 		}
 		c.JSON(http.StatusOK, gin.H{"results": res})
+		res2, err := conv.GetColor()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "error in fetching authors"})
+		}
+		c.JSON(http.StatusOK, gin.H{"results": res2})
 
 	}
 
